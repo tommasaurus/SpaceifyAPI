@@ -9,14 +9,17 @@ from app.utils.timing import log_timing
 
 # Import necessary modules
 from PIL import Image, UnidentifiedImageError
-import pytesseract
 import pyheif
-import pdfplumber
+import fitz  # PyMuPDF
 from docx import Document
+import easyocr
 
 # Configure logging
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
+
+# Initialize EasyOCR reader once to avoid overhead
+EASYOCR_READER = easyocr.Reader(['en'], gpu=False)  # Set gpu=True if you have a GPU
 
 class BaseDocumentProcessor(ABC):
     def __init__(self, file: Union[BytesIO, 'File'], filename: str):
@@ -30,9 +33,14 @@ class BaseDocumentProcessor(ABC):
 class ImageProcessor(BaseDocumentProcessor):
     def extract_text(self) -> Optional[str]:
         try:
-            image = Image.open(self.file)
-            text = pytesseract.image_to_string(image)
-            return text.strip() or None
+            image = Image.open(self.file).convert('RGB')
+            text = EASYOCR_READER.readtext(
+                image,
+                detail=0,
+                paragraph=True,
+                width_ths=0.7
+            )
+            return "\n".join(text).strip() or None
         except UnidentifiedImageError as e:
             logger.error(f"Unable to open image file: {self.filename}. Error: {e}")
         except Exception as e:
@@ -50,9 +58,14 @@ class HEICProcessor(BaseDocumentProcessor):
                 "raw",
                 heif_file.mode,
                 heif_file.stride,
+            ).convert('RGB')
+            text = EASYOCR_READER.readtext(
+                image,
+                detail=0,
+                paragraph=True,
+                width_ths=0.7
             )
-            text = pytesseract.image_to_string(image)
-            return text.strip() or None
+            return "\n".join(text).strip() or None
         except Exception as e:
             logger.error(f"Unable to process HEIC file: {self.filename}. Error: {e}")
         return None
@@ -61,13 +74,23 @@ class PDFProcessor(BaseDocumentProcessor):
     def extract_text(self) -> Optional[str]:
         text = ""
         try:
-            with pdfplumber.open(self.file) as pdf:
-                for page_number, page in enumerate(pdf.pages, start=1):
-                    page_text = page.extract_text()
-                    if page_text:
+            with fitz.open(stream=self.file.read(), filetype="pdf") as doc:
+                for page_number, page in enumerate(doc, start=1):
+                    page_text = page.get_text()
+                    if page_text.strip():
                         text += page_text + "\n"
                     else:
                         logger.warning(f"No text extracted from page {page_number} of PDF: {self.filename}")
+                        # Optionally, perform OCR on the page image
+                        # image = page.get_pixmap()
+                        # image_pil = Image.frombytes("RGB", [image.width, image.height], image.samples)
+                        # ocr_text = EASYOCR_READER.readtext(
+                        #     image_pil,
+                        #     detail=0,
+                        #     paragraph=True,
+                        #     width_ths=0.7
+                        # )
+                        # text += "\n".join(ocr_text) + "\n"
             return text.strip() or None
         except Exception as e:
             logger.error(f"Error processing PDF file: {self.filename}. Error: {e}")

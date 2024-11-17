@@ -71,9 +71,10 @@ async def startup():
 
 # Middleware
 app.add_middleware(SessionMiddleware, secret_key=settings.SECRET_KEY)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],  # Update with your frontend URL
+    allow_origins=["https://www.spaceify.ai"], 
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

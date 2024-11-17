@@ -61,7 +61,7 @@ async def auth_callback(request: Request, response: Response, db: AsyncSession =
         token_data = await authenticate_oauth_user(db, token)
 
         # Redirect to dashboard on the frontend
-        frontend_dashboard_url = "http://localhost:3000/dashboard"
+        frontend_dashboard_url = "https://spaceify.ai/dashboard"
         redirect_response = RedirectResponse(url=frontend_dashboard_url)
 
         # Set the refresh token as an HTTP-only cookie
