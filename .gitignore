@@ -1,0 +1,10 @@
+propertymanagement/
+
+client/node_modules/
+client/package-lock.json
+
+__pycache__
+
+.env
+
+node_modules/
