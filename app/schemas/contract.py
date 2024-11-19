@@ -38,6 +38,6 @@ class ContractInDBBase(ContractBase):
 
 class Contract(ContractInDBBase):
     property: PropertySummary
-    vendor: VendorSummary
+    vendor: Optional[VendorSummary] = None
 
     model_config = ConfigDict(from_attributes=True)  

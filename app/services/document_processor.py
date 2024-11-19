@@ -13,6 +13,7 @@ import pyheif
 import fitz  # PyMuPDF
 from docx import Document
 import easyocr
+import pytesseract
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -34,13 +35,8 @@ class ImageProcessor(BaseDocumentProcessor):
     def extract_text(self) -> Optional[str]:
         try:
             image = Image.open(self.file).convert('RGB')
-            text = EASYOCR_READER.readtext(
-                image,
-                detail=0,
-                paragraph=True,
-                width_ths=0.7
-            )
-            return "\n".join(text).strip() or None
+            text = pytesseract.image_to_string(image)
+            return text.strip() or None
         except UnidentifiedImageError as e:
             logger.error(f"Unable to open image file: {self.filename}. Error: {e}")
         except Exception as e:
@@ -59,13 +55,8 @@ class HEICProcessor(BaseDocumentProcessor):
                 heif_file.mode,
                 heif_file.stride,
             ).convert('RGB')
-            text = EASYOCR_READER.readtext(
-                image,
-                detail=0,
-                paragraph=True,
-                width_ths=0.7
-            )
-            return "\n".join(text).strip() or None
+            text = pytesseract.image_to_string(image)
+            return text.strip() or None
         except Exception as e:
             logger.error(f"Unable to process HEIC file: {self.filename}. Error: {e}")
         return None

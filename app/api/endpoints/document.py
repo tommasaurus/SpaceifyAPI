@@ -9,6 +9,7 @@ from fastapi import (
     status,
     BackgroundTasks
 )
+from fastapi.encoders import jsonable_encoder
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
 from app import schemas, crud
@@ -200,54 +201,25 @@ async def update_document(
 
 
 @router.delete(
-    "/{document_id}", 
-    response_model=schemas.Document,
-    summary="Delete a document",
-    description="Deletes a specific document by its ID and removes the associated file from the filesystem."
+    "/{document_id}",
+    response_model=schemas.DocumentDeleteResponse,
 )
 async def delete_document(
     document_id: int,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
-):
-    """
-    Deletes a document.
-
-    Args:
-        document_id (int): The ID of the document to delete.
-        db (AsyncSession): The database session.
-        current_user (User): The authenticated user.
-
-    Returns:
-        Document: The deleted document.
-    """
-    logger.info(f"User {current_user.id} is attempting to delete document {document_id}")
-
+):    
+    # Delete the document without fetching it
     try:
-        document = await crud.crud_document.delete_document(db=db, document_id=document_id, user_id=current_user.id)
-        if document is None:
-            logger.warning(f"Document {document_id} not found for user {current_user.id}")
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
-        logger.info(f"Document {document_id} deleted from database by user {current_user.id}")
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Failed to delete document {document_id}: {e}")
+        await crud.crud_document.delete_document(
+            db=db,
+            document_id=document_id,
+            owner_id=current_user.id
+        )        
+    except Exception as e:        
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to delete document."
         )
 
-    # Delete the file from the filesystem
-    try:
-        if os.path.exists(document.file_url):
-            os.remove(document.file_url)
-            logger.info(f"File {document.file_url} deleted from filesystem for document {document_id}")
-    except Exception as e:
-        logger.error(f"Failed to delete file {document.file_url} for document {document_id}: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to delete file from filesystem."
-        )
-    
-    return document
+    return {"id": document_id, "message": "Document deleted successfully."}

@@ -39,10 +39,14 @@ class DocumentInDBBase(DocumentBase):
     model_config = ConfigDict(from_attributes=True)
 
 class Document(DocumentInDBBase):
-    property: Optional[PropertySummary] = None    
-    lease: Optional[LeaseSummary] = None
-    expense: Optional[ExpenseSummary] = None
-    invoice: Optional[InvoiceSummary] = None
-    contract: Optional[ContractSummary] = None
+    # property: Optional[PropertySummary] = None    
+    # lease: Optional[LeaseSummary] = None
+    # expense: Optional[ExpenseSummary] = None
+    # invoice: Optional[InvoiceSummary] = None
+    # contract: Optional[ContractSummary] = None
 
     model_config = ConfigDict(from_attributes=True)
+
+class DocumentDeleteResponse(BaseModel):
+    id: int
+    message: str

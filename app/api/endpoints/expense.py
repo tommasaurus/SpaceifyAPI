@@ -65,7 +65,16 @@ async def delete_expense(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    expense = await crud.crud_expense.delete_expense(db=db, expense_id=expense_id, owner_id=current_user.id)
+    # Step 1: Fetch the expense
+    expense = await crud.crud_expense.get_expense(db=db, expense_id=expense_id, owner_id=current_user.id)
     if expense is None:
         raise HTTPException(status_code=404, detail="Expense not found")
-    return expense
+
+    # Step 2: Convert to Pydantic model before deletion
+    expense_data = schemas.Expense.from_orm(expense)
+
+    # Step 3: Delete the expense
+    await crud.crud_expense.delete_expense(db=db, expense_id=expense_id, owner_id=current_user.id)
+
+    # Step 4: Return the Pydantic model
+    return expense_data

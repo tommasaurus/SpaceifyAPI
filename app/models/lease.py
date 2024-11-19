@@ -29,4 +29,4 @@ class Lease(Base):
     property = relationship('Property', back_populates='leases')
     tenants = relationship('Tenant', back_populates='lease')
     payments = relationship('Payment', back_populates='lease')
-    document = relationship('Document', uselist=False, back_populates='lease')
+    document = relationship('Document', uselist=False, back_populates='lease', cascade="all, delete-orphan")

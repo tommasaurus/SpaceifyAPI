@@ -83,7 +83,16 @@ async def delete_tenant(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    tenant = await crud.crud_tenant.delete_tenant(db=db, tenant_id=tenant_id, owner_id=current_user.id)
+    # Fetch the tenant with relationships eagerly loaded
+    tenant = await crud.crud_tenant.get_tenant(db=db, tenant_id=tenant_id, owner_id=current_user.id)
     if tenant is None:
         raise HTTPException(status_code=404, detail="Tenant not found")
-    return tenant
+    
+    # Prepare the response data before deletion
+    tenant_response = schemas.TenantResponse.from_orm(tenant)
+    
+    # Delete the tenant
+    await crud.crud_tenant.delete_tenant(db=db, tenant_id=tenant_id, owner_id=current_user.id)
+    
+    # Return the prepared response
+    return tenant_response

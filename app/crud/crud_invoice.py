@@ -3,7 +3,7 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, selectinload
 from typing import List
 from app.models.property import Property
 from app.models.vendor import Vendor
@@ -70,7 +70,7 @@ class CRUDInvoice:
     ) -> List[Invoice]:
         result = await db.execute(
             select(Invoice)
-            .options(joinedload(Invoice.line_items))  # Eagerly load line_items
+            .options(selectinload(Invoice.line_items))
             .join(Property)
             .filter(Property.owner_id == owner_id)
             .offset(skip)
@@ -86,7 +86,7 @@ class CRUDInvoice:
     ) -> Invoice:
         result = await db.execute(
             select(Invoice)
-            .options(joinedload(Invoice.line_items))  # Eagerly load line_items
+            .options(selectinload(Invoice.line_items))
             .join(Property)
             .filter(Invoice.id == invoice_id)
             .filter(Property.owner_id == owner_id)

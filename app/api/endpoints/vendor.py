@@ -65,7 +65,20 @@ async def delete_vendor(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    vendor = await crud.crud_vendor.delete_vendor(db=db, vendor_id=vendor_id, owner_id=current_user.id)
-    if vendor is None:
-        raise HTTPException(status_code=404, detail="Vendor not found")
-    return vendor
+    try:
+        vendor = await crud.crud_vendor.delete_vendor(
+            db=db, 
+            vendor_id=vendor_id, 
+            owner_id=current_user.id
+        )
+        if vendor is None:
+            raise HTTPException(
+                status_code=404,
+                detail="Vendor not found or you don't have permission to delete it"
+            )
+        return vendor
+    except ValueError as e:
+        raise HTTPException(
+            status_code=400,
+            detail=str(e)
+        )

@@ -12,7 +12,7 @@ from app.schemas.tenant import TenantResponse, TenantCreate, TenantUpdate
 
 class CRUDTenant:
     async def get_tenant(
-        self, db: AsyncSession, tenant_id: int, owner_id: int
+    self, db: AsyncSession, tenant_id: int, owner_id: int
     ) -> Optional[Tenant]:
         result = await db.execute(
             select(Tenant)
@@ -20,9 +20,8 @@ class CRUDTenant:
                 selectinload(Tenant.property),
                 selectinload(Tenant.lease),
             )
-            .join(Tenant.property)
             .filter(Tenant.id == tenant_id)
-            .filter(Property.owner_id == owner_id)
+            .filter(Tenant.owner_id == owner_id)
         )
         return result.scalars().first()
 
@@ -138,9 +137,9 @@ class CRUDTenant:
         return db_tenant
 
     async def delete_tenant(
-        self, db: AsyncSession, tenant_id: int, owner_id: int
-    ) -> Optional[Tenant]:
-        # First find the tenant directly without joining property
+    self, db: AsyncSession, tenant_id: int, owner_id: int
+    ) -> None:
+        # Find the tenant without loading relationships (already done)
         result = await db.execute(
             select(Tenant)
             .filter(Tenant.id == tenant_id)
@@ -155,7 +154,6 @@ class CRUDTenant:
             except IntegrityError as e:
                 await db.rollback()
                 raise ValueError("An error occurred while deleting the tenant: " + str(e))
-        return db_tenant
 
 # Initialize the CRUD object
 crud_tenant = CRUDTenant()

@@ -12,7 +12,7 @@ from .invoice.invoice import Invoice, InvoiceCreate, InvoiceUpdate
 from .invoice.invoice_item import InvoiceItem, InvoiceItemCreate, InvoiceItemUpdate
 from .vendor import Vendor, VendorCreate, VendorUpdate
 from .contract import Contract, ContractCreate, ContractUpdate
-from .document import Document, DocumentCreate, DocumentUpdate
+from .document import Document, DocumentCreate, DocumentUpdate, DocumentDeleteResponse
 from .chat import ChatMessage, ChatResponse
 from .token import Token
 
@@ -57,6 +57,7 @@ __all__ = [
     "Document",
     "DocumentCreate",
     "DocumentUpdate",
+    "DocumentDeleteResponse",
     "Token",
     "ChatMessage", 
     "ChatResponse"

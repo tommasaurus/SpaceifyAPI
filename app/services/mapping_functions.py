@@ -40,13 +40,18 @@ def get_nested_value(data, keys, default="Not Found"):
     return data
 
 def clean_currency(value):
-    if isinstance(value, str):        
+    if isinstance(value, str):
         value = value.replace('$', '').replace(',', '').strip()
+        if value.lower() == 'not found' or value == '':
+            return 0.0
         try:
             return float(value)
         except ValueError:
-            return None  # or 0.0 if you prefer
-    return value
+            return 0.0  # Return 0.0 instead of None
+    elif isinstance(value, (int, float)):
+        return float(value)
+    else:
+        return 0.0
 
 def parse_date(value):
     if isinstance(value, str):
@@ -193,25 +198,29 @@ def map_invoice_data(parsed_data: dict) -> dict:
         line_items = parsed_data.get("line_items", [])
         for item in line_items:
             item_description = get_nested_value(item, ["description"], "No description")
-            quantity = clean_currency(get_nested_value(item, ["quantity"], "1")) or None
-            unit_price = clean_currency(get_nested_value(item, ["unit_price"], "0")) or None
-            total_price = clean_currency(get_nested_value(item, ["total_price"], "0")) or None
+            quantity = clean_currency(get_nested_value(item, ["quantity"], "1"))
+            unit_price = clean_currency(get_nested_value(item, ["unit_price"], "0"))
+            total_price = clean_currency(get_nested_value(item, ["total_price"], "0"))
+
+            # Compute total_price if missing
+            if total_price == 0.0 and quantity != 0.0 and unit_price != 0.0:
+                total_price = quantity * unit_price
 
             line_item = {
                 "description": item_description,
-                "quantity": float(quantity) if isinstance(quantity, (int, float)) else None,
-                "unit_price": float(unit_price) if isinstance(unit_price, (int, float)) else None,
-                "total_price": float(total_price) if isinstance(total_price, (int, float)) else None,
+                "quantity": quantity,
+                "unit_price": unit_price,
+                "total_price": total_price,
             }
             line_items_data.append(line_item)
 
         invoice_data = {
             "invoice_number": parsed_data.get("invoice_number") or None,
-            "amount": amount if amount is not None else 0.0,
-            "paid_amount": paid_amount if paid_amount is not None else 0.0,
-            "remaining_balance": round((amount if amount else 0.0) - (paid_amount if paid_amount else 0.0), 2),
-            "invoice_date": invoice_date.isoformat() if invoice_date else None,
-            "due_date": due_date.isoformat() if due_date else None,
+            "amount": amount,
+            "paid_amount": paid_amount,
+            "remaining_balance": round(amount - paid_amount, 2),
+            "invoice_date": invoice_date,
+            "due_date": due_date,
             "status": parsed_data.get("status") or "Unpaid",
             "description": parsed_data.get("description") or None,
             "vendor_info": parsed_data.get("vendor_information", {}),

@@ -101,7 +101,29 @@ async def delete_contract(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    contract = await crud.crud_contract.delete_contract(db=db, contract_id=contract_id, owner_id=current_user.id)
+    # Fetch the contract with relationships eagerly loaded
+    contract = await crud.crud_contract.get_contract(
+        db=db,
+        contract_id=contract_id,
+        owner_id=current_user.id
+    )
     if contract is None:
         raise HTTPException(status_code=404, detail="Contract not found")
-    return contract
+
+    # Prepare the response data before deletion
+    contract_response = schemas.Contract.from_orm(contract)
+
+    # Delete the contract
+    try:
+        await crud.crud_contract.delete_contract(
+            db=db,
+            contract_id=contract_id,
+            owner_id=current_user.id
+        )
+    except ValueError as e:
+        # Log the error
+        logger.error(f"Failed to delete contract {contract_id}: {e}")
+        raise HTTPException(status_code=400, detail=str(e))
+
+    # Return the prepared response
+    return contract_response

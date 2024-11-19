@@ -6,8 +6,8 @@ from typing import Optional
 class InvoiceItemBase(BaseModel):
     description: str
     quantity: Optional[float] = 1.0
-    unit_price: float
-    total_price: float
+    unit_price: float = 0.0
+    total_price: Optional[float] = None
 
     model_config = ConfigDict(from_attributes=True)
 

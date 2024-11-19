@@ -3,19 +3,16 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import selectinload
-from sqlalchemy import update  
+from sqlalchemy.orm import selectinload, joinedload
+from sqlalchemy import update, delete
 from typing import List, Optional
 from app.models.document import Document
 from app.models.property import Property
+from app.models.invoice.invoice import Invoice
 from app.schemas.document import DocumentCreate, DocumentUpdate
 
 class CRUDDocument:
     async def get_document(self, db: AsyncSession, document_id: int, owner_id: int) -> Optional[Document]:
-        """
-        Retrieve a single document by its ID, ensuring it belongs to the specified user.
-        Eagerly loads related relationships to prevent lazy loading during serialization.
-        """
         result = await db.execute(
             select(Document)
             .options(
@@ -25,11 +22,12 @@ class CRUDDocument:
                 selectinload(Document.invoice),
                 selectinload(Document.contract)
             )
-            .join(Property)
             .filter(Document.id == document_id)
-            .filter(Property.owner_id == owner_id)
         )
-        return result.scalars().first()
+        document = result.scalars().first()
+        if document and document.property.owner_id != owner_id:
+            return None
+        return document
 
     async def get_documents(self, db: AsyncSession, owner_id: int, skip: int = 0, limit: int = 100) -> List[Document]:
         """
@@ -103,19 +101,32 @@ class CRUDDocument:
             raise ValueError("An error occurred while updating the document: " + str(e))
         return db_document
 
-    async def delete_document(self, db: AsyncSession, document_id: int, owner_id: int) -> Optional[Document]:
+    async def delete_document(self, db: AsyncSession, document_id: int, owner_id: int) -> None:
         """
         Delete a document by its ID after verifying ownership.
         """
-        db_document = await self.get_document(db, document_id, owner_id)
-        if db_document:
-            await db.delete(db_document)
-            try:
-                await db.commit()
-            except IntegrityError as e:
-                await db.rollback()
-                raise ValueError("An error occurred while deleting the document: " + str(e))
-        return db_document
+        # Verify ownership without loading the Document instance
+        result = await db.execute(
+            select(Document.id)
+            .join(Property)
+            .filter(Document.id == document_id)
+            .filter(Property.owner_id == owner_id)
+        )
+        document_exists = result.scalars().first()
+        if not document_exists:
+            raise ValueError("Document not found or you do not have permission to delete it.")
+
+        # Perform direct DELETE
+        stmt = (
+            delete(Document)
+            .where(Document.id == document_id)
+        )
+        await db.execute(stmt)
+        try:
+            await db.commit()
+        except Exception as e:
+            await db.rollback()            
+            raise ValueError(f"An error occurred while deleting the document.")
 
     async def update_status(self, db: AsyncSession, document_id: int, status: str) -> None:
         """

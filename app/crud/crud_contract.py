@@ -3,7 +3,7 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import selectinload, joinedload
 from typing import List, Optional
 from app.models.contract import Contract
 from app.models.property import Property
@@ -16,7 +16,7 @@ class CRUDContract:
             .options(
                 selectinload(Contract.property),
                 selectinload(Contract.vendor),
-                selectinload(Contract.document)  
+                selectinload(Contract.document)
             )
             .join(Property)
             .filter(Contract.id == contract_id)
@@ -70,16 +70,35 @@ class CRUDContract:
             raise ValueError("An error occurred while updating the contract: " + str(e))
         return db_contract
 
-    async def delete_contract(self, db: AsyncSession, contract_id: int, owner_id: int) -> Optional[Contract]:
-        db_contract = await self.get_contract(db, contract_id, owner_id)
+    async def delete_contract(
+        self,
+        db: AsyncSession,
+        contract_id: int,
+        owner_id: int
+    ) -> None:
+        """
+        Delete a contract by its ID after verifying ownership.
+        """
+        result = await db.execute(
+            select(Contract)
+            .options(
+                selectinload(Contract.property)
+            )
+            .filter(Contract.id == contract_id)
+        )
+        db_contract = result.scalars().first()
         if db_contract:
+            if db_contract.property.owner_id != owner_id:
+                raise ValueError("You do not have permission to delete this contract.")
             await db.delete(db_contract)
             try:
                 await db.commit()
-            except IntegrityError as e:
+            except Exception as e:
                 await db.rollback()
-                raise ValueError("An error occurred while deleting the contract: " + str(e))
-        return db_contract
+                print(f"Exception during commit: {e}")
+                raise ValueError(f"An error occurred while deleting the contract: {e}")
+        else:
+            raise ValueError("Contract not found.")
 
 # Initialize the CRUD object
 crud_contract = CRUDContract()
