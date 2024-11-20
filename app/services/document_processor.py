@@ -14,6 +14,7 @@ import fitz  # PyMuPDF
 from docx import Document
 import easyocr
 import pytesseract
+import numpy as np
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -73,26 +74,26 @@ class PDFProcessor(BaseDocumentProcessor):
                     if not page_text.strip():
                         # If no text found, try EasyOCR first
                         pix = page.get_pixmap()
-                        img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+                        img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)                        
                         
                         try:
-                            ocr_text = EASYOCR_READER.readtext(
-                                img,
-                                detail=0,
-                                paragraph=True,
-                                width_ths=0.7
-                            )
-                            page_text = "\n".join(ocr_text)                            
+                            page_text = pytesseract.image_to_string(img)
                         except Exception as e:
-                            logger.warning(f"EasyOCR failed for page {page_number}, trying Tesseract. Error: {e}")
-                            
-                            # If EasyOCR fails, fall back to Tesseract
+                            logger.error(f"Tesseract OCR failed for page {page_number}, trying EasyOCR: {e}")
                             try:
-                                page_text = pytesseract.image_to_string(img)
+                                # Convert to numpy array for EasyOCR
+                                img_array = np.array(img)
+                                ocr_text = EASYOCR_READER.readtext(
+                                    img_array,
+                                    detail=0,
+                                    paragraph=True,
+                                    width_ths=0.7
+                                )
+                                page_text = "\n".join(ocr_text) if ocr_text else "" 
                             except Exception as e:
-                                logger.error(f"Tesseract OCR failed for page {page_number}. Error: {e}")
+                                logger.error(f"EasyOCR failed for page {page_number}. Error: {e}")
                                 continue
-                    
+
                     text += page_text + "\n"
                     
             return text.strip() or None
