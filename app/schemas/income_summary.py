@@ -6,8 +6,8 @@ from datetime import date
 
 class IncomeSummary(BaseModel):
     id: int
-    category: str
+    category: Optional[str] = None
     amount: float
-    date_received: date
+    transaction_date: Optional[date] = None
 
     model_config = ConfigDict(from_attributes=True)

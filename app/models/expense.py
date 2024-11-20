@@ -12,13 +12,16 @@ class Expense(Base):
     vendor_id = Column(Integer, ForeignKey('vendors.id'), nullable=True)
     invoice_id = Column(Integer, ForeignKey('invoices.id'), unique=True, nullable=True)
 
-    category = Column(String(50), nullable=False)
+    category = Column(String(50), nullable=True)
     amount = Column(Float, nullable=False)
-    date_incurred = Column(Date, nullable=True)
+    transaction_date = Column(Date, nullable=True)
     description = Column(Text, nullable=True)
     receipt_url = Column(String(255), nullable=True)
     is_recurring = Column(Boolean, default=False)
     frequency = Column(String(20), nullable=True)
+    bank_account = Column(String(100), nullable=True)  
+    method = Column(String(50), nullable=True)  
+    entity = Column(String(100), nullable=True) 
 
     # Relationships
     property = relationship('Property', back_populates='expenses')

@@ -3,6 +3,7 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import selectinload 
 from typing import List, Optional
 from app.models.income import Income
 from app.models.property import Property
@@ -12,6 +13,7 @@ class CRUDIncome:
     async def get_income(self, db: AsyncSession, income_id: int, owner_id: int) -> Optional[Income]:
         result = await db.execute(
             select(Income)
+            .options(selectinload(Income.property))  
             .join(Property)
             .filter(Income.id == income_id)
             .filter(Property.owner_id == owner_id)
@@ -21,6 +23,7 @@ class CRUDIncome:
     async def get_incomes(self, db: AsyncSession, owner_id: int, skip: int = 0, limit: int = 100) -> List[Income]:
         result = await db.execute(
             select(Income)
+            .options(selectinload(Income.property))  # Add this line
             .join(Property)
             .filter(Property.owner_id == owner_id)
             .offset(skip)
@@ -41,7 +44,7 @@ class CRUDIncome:
         db.add(db_income)
         try:
             await db.commit()
-            await db.refresh(db_income)
+            await db.refresh(db_income, attribute_names=["property"])  # Add property to attribute_names
         except IntegrityError as e:
             await db.rollback()
             raise ValueError("An error occurred while creating the income: " + str(e))
@@ -53,7 +56,7 @@ class CRUDIncome:
             setattr(db_income, key, value)
         try:
             await db.commit()
-            await db.refresh(db_income)
+            await db.refresh(db_income, attribute_names=["property"])  # Add property to attribute_names
         except IntegrityError as e:
             await db.rollback()
             raise ValueError("An error occurred while updating the income: " + str(e))
