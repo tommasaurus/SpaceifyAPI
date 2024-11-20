@@ -64,28 +64,42 @@ class HEICProcessor(BaseDocumentProcessor):
 class PDFProcessor(BaseDocumentProcessor):
     def extract_text(self) -> Optional[str]:
         text = ""
-        try:
-            with fitz.open(stream=self.file.read(), filetype="pdf") as doc:
+        try:            
+            with fitz.open(stream=self.file.read(), filetype="pdf") as doc:                
                 for page_number, page in enumerate(doc, start=1):
+                    # Try normal text extraction first
                     page_text = page.get_text()
-                    if page_text.strip():
-                        text += page_text + "\n"
-                    else:
-                        logger.warning(f"No text extracted from page {page_number} of PDF: {self.filename}")
-                        # Optionally, perform OCR on the page image
-                        # image = page.get_pixmap()
-                        # image_pil = Image.frombytes("RGB", [image.width, image.height], image.samples)
-                        # ocr_text = EASYOCR_READER.readtext(
-                        #     image_pil,
-                        #     detail=0,
-                        #     paragraph=True,
-                        #     width_ths=0.7
-                        # )
-                        # text += "\n".join(ocr_text) + "\n"
+                    
+                    if not page_text.strip():
+                        # If no text found, try EasyOCR first
+                        pix = page.get_pixmap()
+                        img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+                        
+                        try:
+                            ocr_text = EASYOCR_READER.readtext(
+                                img,
+                                detail=0,
+                                paragraph=True,
+                                width_ths=0.7
+                            )
+                            page_text = "\n".join(ocr_text)                            
+                        except Exception as e:
+                            logger.warning(f"EasyOCR failed for page {page_number}, trying Tesseract. Error: {e}")
+                            
+                            # If EasyOCR fails, fall back to Tesseract
+                            try:
+                                page_text = pytesseract.image_to_string(img)
+                            except Exception as e:
+                                logger.error(f"Tesseract OCR failed for page {page_number}. Error: {e}")
+                                continue
+                    
+                    text += page_text + "\n"
+                    
             return text.strip() or None
+            
         except Exception as e:
             logger.error(f"Error processing PDF file: {self.filename}. Error: {e}")
-        return None
+            return None
 
 class DOCXProcessor(BaseDocumentProcessor):
     def extract_text(self) -> Optional[str]:
