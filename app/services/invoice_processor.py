@@ -102,7 +102,7 @@ async def process_invoice_upload(
         invoice_id=invoice_id,
         category="Invoice Expense",
         amount=invoice_in.amount,
-        date_incurred=invoice_in.invoice_date or datetime.utcnow().date(),
+        transaction_date=invoice_in.invoice_date or datetime.utcnow().date(),
         description=invoice_in.description
     )
     expense = await crud.crud_expense.create_expense(

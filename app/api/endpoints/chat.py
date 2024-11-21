@@ -111,7 +111,7 @@ async def handle_highest_expense_by_property(entities, db: AsyncSession, current
 
     response = (
         f"The highest expense for property '{property.address}' is ${expense.amount:.2f} "
-        f"on {expense.date_incurred}, for '{expense.description}'."
+        f"on {expense.transaction_date}, for '{expense.description}'."
     )
     return response
 
@@ -134,7 +134,7 @@ async def handle_highest_expense_across_properties(entities, db: AsyncSession, c
 
     response = (
         f"The highest expense across all your properties is ${expense.amount:.2f} "
-        f"for property '{property.address}' on {expense.date_incurred}, for '{expense.description}'."
+        f"for property '{property.address}' on {expense.transaction_date}, for '{expense.description}'."
     )
     return response
 
