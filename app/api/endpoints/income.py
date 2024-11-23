@@ -59,13 +59,14 @@ async def update_income(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-@router.delete("/{income_id}", response_model=schemas.Income)
+@router.delete("/{income_id}")
 async def delete_income(
     income_id: int,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    income = await crud.crud_income.delete_income(db=db, income_id=income_id, owner_id=current_user.id)
-    if income is None:
+    """Modified to return a success message instead of the deleted object"""
+    deleted = await crud.crud_income.delete_income(db=db, income_id=income_id, owner_id=current_user.id)
+    if not deleted:
         raise HTTPException(status_code=404, detail="Income not found")
-    return income
+    return {"message": "Income successfully deleted"}

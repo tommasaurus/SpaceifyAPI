@@ -62,16 +62,18 @@ class CRUDIncome:
             raise ValueError("An error occurred while updating the income: " + str(e))
         return db_income
 
-    async def delete_income(self, db: AsyncSession, income_id: int, owner_id: int) -> Optional[Income]:
+    async def delete_income(self, db: AsyncSession, income_id: int, owner_id: int) -> bool:
+        """Modified to return a boolean instead of the deleted object"""
         db_income = await self.get_income(db, income_id, owner_id)
         if db_income:
             await db.delete(db_income)
             try:
                 await db.commit()
+                return True
             except IntegrityError as e:
                 await db.rollback()
                 raise ValueError("An error occurred while deleting the income: " + str(e))
-        return db_income
+        return False
 
 # Initialize the CRUD object
 crud_income = CRUDIncome()
